@@ -26,7 +26,7 @@ public:
         triangles_cpu.resize(n_triangles);
 
         for (size_t i = 0; i < n_triangles; i++) {
-            triangles_cpu[i] = {vertices.row(triangles(i, 0)), vertices.row(triangles(i, 1)), vertices.row(triangles(i, 2))};
+            triangles_cpu[i] = {vertices.row(triangles(i, 0)), vertices.row(triangles(i, 1)), vertices.row(triangles(i, 2)), (int64_t) i};
         }
 
         if (!triangle_bvh) {
@@ -43,14 +43,14 @@ public:
     }
 
     // accept torch tensor (gpu) to init
-    void trace(at::Tensor rays_o, at::Tensor rays_d, at::Tensor positions, at::Tensor normals, at::Tensor depth) {
+    void trace(at::Tensor rays_o, at::Tensor rays_d, at::Tensor positions, at::Tensor normals, at::Tensor depth, at::Tensor face_idx) {
 
         // must be contiguous, float, cuda, shape [N, 3]. check in torch side.
 
         const uint32_t n_elements = rays_o.size(0);
         cudaStream_t stream = at::cuda::getCurrentCUDAStream();
 
-        triangle_bvh->ray_trace_gpu(n_elements, rays_o.data_ptr<float>(), rays_d.data_ptr<float>(), positions.data_ptr<float>(), normals.data_ptr<float>(), depth.data_ptr<float>(), triangles_gpu.data(), stream);
+        triangle_bvh->ray_trace_gpu(n_elements, rays_o.data_ptr<float>(), rays_d.data_ptr<float>(), positions.data_ptr<float>(), normals.data_ptr<float>(), depth.data_ptr<float>(), face_idx.data_ptr<int64_t>(), triangles_gpu.data(), stream);
     }
 
     std::vector<Triangle> triangles_cpu;

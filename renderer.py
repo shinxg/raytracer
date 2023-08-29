@@ -4,7 +4,7 @@ import numpy as np
 import trimesh
 
 import torch
-import raytracing
+import RayTracer as raytracing
 
 import dearpygui.dearpygui as dpg
 from scipy.spatial.transform import Rotation as R
@@ -230,7 +230,7 @@ class GUI:
 
 
     def prepare_buffer(self, outputs):
-        positions, normals, depth = outputs
+        positions, normals, depth, _ = outputs
 
         if self.mode == 'position':
             # outputs is the actual 3D point, how to visualize them ???

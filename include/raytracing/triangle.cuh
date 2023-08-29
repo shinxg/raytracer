@@ -153,6 +153,7 @@ struct Triangle {
     }
 
     Eigen::Vector3f a, b, c;
+    int64_t idx;
 };
 
 

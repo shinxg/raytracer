@@ -116,7 +116,7 @@ python setup.py develop # build extensions and install (symbolic) to PATH.
 pip install -e . # ditto but better (e.g., dependency & metadata handling)
 '''
 setup(
-    name='raytracer', # package name, import this to use python API
+    name='RayTracer', # package name, import this to use python API
     version='0.1.0',
     description='CUDA RayTracer with BVH acceleration',
     url='https://github.com/ashawkey/raytracing',

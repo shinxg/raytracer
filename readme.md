@@ -1,6 +1,3 @@
-extension of https://github.com/ashawkey/raytracing
-returns face indices
-
 # RayTracer
 
 A CUDA Mesh RayTracer with BVH acceleration.

@@ -33,7 +33,7 @@ using namespace raytracing;
 
 namespace raytracing {
 
-constexpr float MAX_DIST = 10.0f;
+constexpr float MAX_DIST = 1000000.0f;
 constexpr float MAX_DIST_SQ = MAX_DIST*MAX_DIST;
 
 
@@ -135,7 +135,7 @@ constexpr float MAX_DIST_SQ = MAX_DIST*MAX_DIST;
 // __global__ void signed_distance_watertight_kernel(uint32_t n_elements, const Vector3f* __restrict__ positions, const TriangleBvhNode* __restrict__ bvhnodes, const Triangle* __restrict__ triangles, float* __restrict__ distances, bool use_existing_distances_as_upper_bounds = false);
 // __global__ void signed_distance_raystab_kernel(uint32_t n_elements, const Vector3f* __restrict__ positions, const TriangleBvhNode* __restrict__ bvhnodes, const Triangle* __restrict__ triangles, float* __restrict__ distances, bool use_existing_distances_as_upper_bounds = false);
 // __global__ void unsigned_distance_kernel(uint32_t n_elements, const Vector3f* __restrict__ positions, const TriangleBvhNode* __restrict__ bvhnodes, const Triangle* __restrict__ triangles, float* __restrict__ distances, bool use_existing_distances_as_upper_bounds = false);
-__global__ void raytrace_kernel(uint32_t n_elements, const Vector3f* __restrict__ rays_o, const Vector3f* __restrict__ rays_d, Vector3f* __restrict__ positions, Vector3f* __restrict__ normals, float* __restrict__ depth, const TriangleBvhNode* __restrict__ nodes, const Triangle* __restrict__ triangles);
+__global__ void raytrace_kernel(uint32_t n_elements, const Vector3f* __restrict__ rays_o, const Vector3f* __restrict__ rays_d, Vector3f* __restrict__ positions, Vector3f* __restrict__ normals, float* __restrict__ depth, const TriangleBvhNode* __restrict__ nodes, const Triangle* __restrict__ triangles, int64_t* __restrict__ face_idx);
 
 struct DistAndIdx {
     float dist;
@@ -466,7 +466,7 @@ public:
     //     }
     // }
 
-    void ray_trace_gpu(uint32_t n_elements, const float* rays_o, const float* rays_d, float* positions, float* normals, float* depth, const Triangle* gpu_triangles, cudaStream_t stream) override {
+    void ray_trace_gpu(uint32_t n_elements, const float* rays_o, const float* rays_d, float* positions, float* normals, float* depth, int64_t * face_idx, const Triangle* gpu_triangles, cudaStream_t stream) override {
 
         // cast float* to Vector3f*
         const Vector3f* rays_o_vec = (const Vector3f*)rays_o;
@@ -488,7 +488,8 @@ public:
                 normals_vec,
                 depth,
                 m_nodes_gpu.data(),
-                gpu_triangles
+                gpu_triangles,
+                face_idx
             );
         }
     }
@@ -691,7 +692,7 @@ std::unique_ptr<TriangleBvh> TriangleBvh::make() {
 //     distances[i] = TriangleBvh4::unsigned_distance(positions[i], bvhnodes, triangles, max_distance*max_distance);
 // }
 
-__global__ void raytrace_kernel(uint32_t n_elements, const Vector3f* __restrict__ rays_o, const Vector3f* __restrict__ rays_d, Vector3f* __restrict__ positions, Vector3f* __restrict__ normals, float* __restrict__ depth, const TriangleBvhNode* __restrict__ nodes, const Triangle* __restrict__ triangles) {
+__global__ void raytrace_kernel(uint32_t n_elements, const Vector3f* __restrict__ rays_o, const Vector3f* __restrict__ rays_d, Vector3f* __restrict__ positions, Vector3f* __restrict__ normals, float* __restrict__ depth, const TriangleBvhNode* __restrict__ nodes, const Triangle* __restrict__ triangles, int64_t* __restrict__ face_idx) {
     uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i >= n_elements) return;
 
@@ -710,8 +711,10 @@ __global__ void raytrace_kernel(uint32_t n_elements, const Vector3f* __restrict_
     // face normal is written to directions.
     if (p.first >= 0) {
         normals[i] = triangles[p.first].normal();
+        face_idx[i] = triangles[p.first].idx;
     } else {
         normals[i].setZero();
+        face_idx[i] = -1;
     }
 
     // shall we write the depth? (p.second)
